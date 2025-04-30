@@ -516,9 +516,6 @@ texture_setup (struct render_target *r)
         1, 2, 3  // second triangle
     };
 
-    r->texture_id = texture_create ("bricks.jpg");
-    r->shader_id = shader_create ("tex.vs", "tex.fs");
-
     unsigned int vao;
     GLCALL (glGenVertexArrays (1, &vao));
     GLCALL (glBindVertexArray (vao));
@@ -533,18 +530,20 @@ texture_setup (struct render_target *r)
     GLCALL (glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, ebo));
     GLCALL (glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (indices), indices, GL_STATIC_DRAW));
 
-    // position
+    // position (location=0)
     GLCALL (glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof (float), (void *) 0));
     GLCALL (glEnableVertexAttribArray (0));
 
-    // colour
+    // colour (location=1)
     GLCALL (glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof (float), (void *) (3 * sizeof (float))));
     GLCALL (glEnableVertexAttribArray (1));
 
-    // texture
+    // texture (location=2)
     GLCALL (glVertexAttribPointer (2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof (float), (void *) (6 * sizeof (float))));
     GLCALL (glEnableVertexAttribArray (2));
 
+    r->texture_id = texture_create ("bricks.jpg");
+    r->shader_id = shader_create ("tex.vs", "tex.fs");
     r->vao = vao;
 
     ASSERT (r->texture_id != 0);
