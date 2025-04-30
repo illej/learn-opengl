@@ -6,7 +6,10 @@
 #include <SDL2/SDL.h>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include <stb_image.h>
+
+#define MATH_3D_IMPLEMENTATION
+#include <math_3d.h>
 
 #include "trace.h"
 
