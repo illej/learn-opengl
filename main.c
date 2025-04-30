@@ -42,8 +42,8 @@ struct render_target
 {
     unsigned int vao;
     unsigned int shader_id;
-
-    unsigned int texture_id;
+    unsigned int shader_ids[10];
+    unsigned int texture_ids[10];
 };
 
 struct context
@@ -52,6 +52,7 @@ struct context
     SDL_GLContext *gl;
 
     enum state state;
+    int variation;
     struct render_target render_targets[STATE_RENDER_MAX];
 
     bool draw_wireframes;
@@ -210,6 +211,12 @@ process_keydown (struct context *ctx, SDL_Keycode key)
             break;
         case SDLK_3:
             ctx->state = STATE_RENDER_TEXTURE;
+            ctx->variation++;
+            if (ctx->variation >= 3)
+            {
+                ctx->variation = 0;
+            }
+            printf ("variation: %d\n", ctx->variation);
             break;
         case SDLK_w:
             ctx->draw_wireframes = !ctx->draw_wireframes;
@@ -542,19 +549,35 @@ texture_setup (struct render_target *r)
     GLCALL (glVertexAttribPointer (2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof (float), (void *) (6 * sizeof (float))));
     GLCALL (glEnableVertexAttribArray (2));
 
-    r->texture_id = texture_create ("bricks.jpg");
-    r->shader_id = shader_create ("tex.vs", "tex.fs");
+    r->texture_ids[0] = texture_create ("bricks.jpg");
+    r->texture_ids[1] = texture_create ("face.png");
+    r->shader_ids[0] = shader_create ("tex.vs", "tex.fs");
+    r->shader_ids[1] = shader_create ("tex.vs", "tex-colour.fs");
+    r->shader_ids[2] = shader_create ("tex.vs", "tex-face.fs");
     r->vao = vao;
 
-    ASSERT (r->texture_id != 0);
+    ASSERT (r->texture_ids[0] != 0);
+    ASSERT (r->texture_ids[1] != 0);
+    ASSERT (r->shader_ids[0] != 0);
+    ASSERT (r->shader_ids[1] != 0);
+    ASSERT (r->shader_ids[2] != 0);
     ASSERT (r->vao != 0);
 }
 
 static void
-texture_render (struct render_target *rt)
+texture_render (struct context *ctx, struct render_target *rt)
 {
-    GLCALL (glUseProgram (rt->shader_id));
-    GLCALL (glBindTexture (GL_TEXTURE_2D, rt->texture_id));
+    GLCALL (glUseProgram (rt->shader_ids[ctx->variation]));
+    GLCALL (glUniform1i (glGetUniformLocation(rt->shader_ids[ctx->variation], "u_texture0"), 0));
+    GLCALL (glActiveTexture (GL_TEXTURE0));
+    GLCALL (glBindTexture (GL_TEXTURE_2D, rt->texture_ids[0]));
+    if (ctx->variation == 2)
+    {
+        GLCALL (glUseProgram (rt->shader_ids[ctx->variation]));
+        GLCALL (glUniform1i (glGetUniformLocation(rt->shader_ids[ctx->variation], "u_texture1"), 1));
+        GLCALL (glActiveTexture (GL_TEXTURE1));
+        GLCALL (glBindTexture (GL_TEXTURE_2D, rt->texture_ids[1]));
+    }
     GLCALL (glBindVertexArray (rt->vao));
 
     GLCALL (glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
@@ -614,7 +637,7 @@ main (int c, char **v)
                 triangle_render (rt);
                 break;
             case STATE_RENDER_TEXTURE:
-                texture_render (rt);
+                texture_render (&ctx, rt);
                 break;
         }
 
