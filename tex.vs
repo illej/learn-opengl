@@ -7,9 +7,11 @@ layout (location=2) in vec2 coords;
 out vec3 vert_colour;
 out vec2 vert_tex_coords;
 
+uniform mat4 u_xfrm;
+
 void main()
 {
-    gl_Position = vec4(pos, 1.0);
+    gl_Position = u_xfrm * vec4(pos, 1.0);
     vert_colour = colour;
     vert_tex_coords = coords;
 }

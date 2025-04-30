@@ -27,6 +27,7 @@
 #define ASSERT(expr) \
     if (!(expr)) { FATAL ("Assertion failed in %s at %s():%d\n %s", __FILE__, __func__, __LINE__, #expr); *(int *) 0 = 0; }
 #define GLCALL(expr) expr; ASSERT (gl_check_error (#expr, __FILE__, __LINE__))
+#define RADIANS(__DEGREES) (__DEGREES * (M_PI / 180.0))
 
 #define WINDOW_WIDTH_PX     800
 #define WINDOW_HEIGHT_PX    600
@@ -56,6 +57,7 @@ struct context
 
     enum state state;
     int variation;
+    bool rotate;
     struct render_target render_targets[STATE_RENDER_MAX];
 
     bool draw_wireframes;
@@ -178,6 +180,7 @@ init (struct context *ctx)
 
     ctx->gl = SDL_GL_CreateContext (ctx->window);
     ASSERT (ctx->gl != NULL);
+    ctx->variation = -1;
 
     SDL_GL_SetSwapInterval (1); // vsync on
 
@@ -219,10 +222,12 @@ process_keydown (struct context *ctx, SDL_Keycode key)
             {
                 ctx->variation = 0;
             }
-            printf ("variation: %d\n", ctx->variation);
             break;
         case SDLK_w:
             ctx->draw_wireframes = !ctx->draw_wireframes;
+            break;
+        case SDLK_r:
+            ctx->rotate = !ctx->rotate;
             break;
         default:
             printf ("Unhandled key: %c (%d)\n", key, key);
@@ -570,21 +575,41 @@ texture_setup (struct render_target *r)
 static void
 texture_render (struct context *ctx, struct render_target *rt)
 {
-    GLCALL (glUseProgram (rt->shader_ids[ctx->variation]));
-    GLCALL (glUniform1i (glGetUniformLocation (rt->shader_ids[ctx->variation], "u_texture0"), 0));
+    unsigned int shader_id = rt->shader_ids[ctx->variation];
+    unsigned int tex_location;
+    unsigned int xfrm_location;
+    mat4_t xfrm;
+
+    xfrm = m4_identity ();
+    if (ctx->rotate)
+    {
+        xfrm = m4_mul (xfrm, m4_rotation (RADIANS (90.0), vec3 (0.0, 0.0, 1.0)));
+        xfrm = m4_mul (xfrm, m4_scaling (vec3 (0.5, 0.5, 0.5)));
+    }
+
+    GLCALL (glUseProgram (shader_id));
+    GLCALL (xfrm_location = glGetUniformLocation (shader_id, "u_xfrm"));
+    GLCALL (glUniformMatrix4fv (xfrm_location, 1, GL_FALSE, &xfrm.m[0][0]));
+    GLCALL (tex_location = glGetUniformLocation (shader_id, "u_texture0"));
+    GLCALL (glUniform1i (tex_location, 0));
+
     GLCALL (glActiveTexture (GL_TEXTURE0));
     GLCALL (glBindTexture (GL_TEXTURE_2D, rt->texture_ids[0]));
     if (ctx->variation == 2)
     {
-        GLCALL (glUseProgram (rt->shader_ids[ctx->variation]));
-        GLCALL (glUniform1i (glGetUniformLocation (rt->shader_ids[ctx->variation], "u_texture1"), 1));
+        GLCALL (glUseProgram (shader_id));
+        GLCALL (tex_location = glGetUniformLocation (shader_id, "u_texture1"));
+        GLCALL (glUniform1i (tex_location, 1));
+
         GLCALL (glActiveTexture (GL_TEXTURE1));
         GLCALL (glBindTexture (GL_TEXTURE_2D, rt->texture_ids[1]));
     }
     GLCALL (glBindVertexArray (rt->vao));
 
+    /* draw */
     GLCALL (glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
 
+    /* cleanup */
     GLCALL (glBindVertexArray (0));
     GLCALL (glBindTexture (GL_TEXTURE_2D, 0)); 
     GLCALL (glUseProgram (0));
