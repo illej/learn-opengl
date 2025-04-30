@@ -207,7 +207,6 @@ process_keydown (struct context *ctx, SDL_Keycode key)
     {
         case SDLK_ESCAPE:
             g__running = false;
-            printf ("esc\n");
             break;
         case SDLK_1:
             ctx->state = STATE_RENDER_SQUARE;
@@ -246,7 +245,6 @@ handle_input (struct context *ctx)
         {
             case SDL_QUIT:
                 g__running = false;
-                printf ("quit\n");
                 break;
             case SDL_KEYDOWN:
                 process_keydown (ctx, e.key.keysym.sym);
