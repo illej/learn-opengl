@@ -581,8 +581,9 @@ texture_render (struct context *ctx, struct render_target *rt)
     xfrm = m4_identity ();
     if (ctx->rotate)
     {
-        xfrm = m4_mul (xfrm, m4_rotation (RADIANS (90.0), vec3 (0.0, 0.0, 1.0)));
-        xfrm = m4_mul (xfrm, m4_scaling (vec3 (0.5, 0.5, 0.5)));
+        float secs = SDL_GetTicks () / 1000.0;
+        xfrm = m4_translation (vec3 (0.5, -0.5, 0.0));
+        xfrm = m4_mul (xfrm, m4_rotation (secs, vec3 (0.0, 0.0, 1.0)));
     }
 
     GLCALL (glUseProgram (shader_id));
