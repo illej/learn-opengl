@@ -568,13 +568,13 @@ static void
 texture_render (struct context *ctx, struct render_target *rt)
 {
     GLCALL (glUseProgram (rt->shader_ids[ctx->variation]));
-    GLCALL (glUniform1i (glGetUniformLocation(rt->shader_ids[ctx->variation], "u_texture0"), 0));
+    GLCALL (glUniform1i (glGetUniformLocation (rt->shader_ids[ctx->variation], "u_texture0"), 0));
     GLCALL (glActiveTexture (GL_TEXTURE0));
     GLCALL (glBindTexture (GL_TEXTURE_2D, rt->texture_ids[0]));
     if (ctx->variation == 2)
     {
         GLCALL (glUseProgram (rt->shader_ids[ctx->variation]));
-        GLCALL (glUniform1i (glGetUniformLocation(rt->shader_ids[ctx->variation], "u_texture1"), 1));
+        GLCALL (glUniform1i (glGetUniformLocation (rt->shader_ids[ctx->variation], "u_texture1"), 1));
         GLCALL (glActiveTexture (GL_TEXTURE1));
         GLCALL (glBindTexture (GL_TEXTURE_2D, rt->texture_ids[1]));
     }
