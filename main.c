@@ -39,6 +39,7 @@ enum state
     STATE_RENDER_SQUARE,
     STATE_RENDER_TRIANGLE,
     STATE_RENDER_TEXTURE,
+    STATE_RENDER_CUBE,
     STATE_RENDER_MAX
 };
 
@@ -227,6 +228,9 @@ process_keydown (struct context *ctx, SDL_Keycode key)
             break;
         case SDLK_r:
             ctx->rotate = !ctx->rotate;
+            break;
+        case SDLK_4:
+            ctx->state = STATE_RENDER_CUBE;
             break;
         default:
             printf ("Unhandled key: %c (%d)\n", key, key);
@@ -584,7 +588,7 @@ texture_render (struct context *ctx, struct render_target *rt)
     unsigned int xfrm_location;
     mat4_t xfrm;
 
-    xfrm = m4_identity ();
+    xfrm = m4_identity (); // same as glm:mat4(1.0f);
     if (ctx->rotate)
     {
         float secs = SDL_GetTicks () / 1000.0;
@@ -609,6 +613,7 @@ texture_render (struct context *ctx, struct render_target *rt)
         GLCALL (glActiveTexture (GL_TEXTURE1));
         GLCALL (glBindTexture (GL_TEXTURE_2D, rt->texture_ids[1]));
     }
+
     GLCALL (glBindVertexArray (rt->vao));
 
     /* draw */
@@ -618,6 +623,134 @@ texture_render (struct context *ctx, struct render_target *rt)
     GLCALL (glBindVertexArray (0));
     GLCALL (glBindTexture (GL_TEXTURE_2D, 0)); 
     GLCALL (glUseProgram (0));
+}
+
+static void
+cube_setup (struct render_target *rt)
+{
+    float vertices[] = {
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+        0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+    };
+
+    unsigned int vao;
+    GLCALL (glGenVertexArrays (1, &vao));
+    GLCALL (glBindVertexArray (vao));
+
+    unsigned int vbo;
+    GLCALL (glGenBuffers (1, &vbo));
+    GLCALL (glBindBuffer (GL_ARRAY_BUFFER, vbo));
+    GLCALL (glBufferData (GL_ARRAY_BUFFER, sizeof (vertices), vertices, GL_DYNAMIC_DRAW));
+
+    // position attribute
+    glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof (float), (void *) 0);
+    glEnableVertexAttribArray (0);
+
+    // texture coord attribute
+    glVertexAttribPointer (1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof (float), (void *) (3 * sizeof (float)));
+    glEnableVertexAttribArray (1);
+
+    rt->texture_ids[0] = texture_create ("container.jpg");
+    rt->texture_ids[1] = texture_create ("face.png");
+    rt->shader_ids[0] = shader_create ("cube.vs", "cube.fs");
+    rt->vao = vao;
+
+    ASSERT (rt->texture_ids[0] != 0);
+    ASSERT (rt->texture_ids[1] != 0);
+    ASSERT (rt->shader_ids[0] != 0);
+    ASSERT (rt->vao != 0);
+}
+
+static void
+cube_render (struct context *ctx, struct render_target *rt)
+{
+    unsigned int shader_id = rt->shader_ids[0];
+    mat4_t model;
+    mat4_t view;
+    mat4_t projection;
+    unsigned int model_location;
+    unsigned int view_location;
+    unsigned int projection_location;
+    unsigned int tex0_location;
+    unsigned int tex1_location;
+    float secs = SDL_GetTicks () / 1000.0;
+
+    model = m4_identity ();
+    model = m4_mul (model, m4_rotation (secs, vec3 (0.5, 1.0, 0.0)));
+
+    view = m4_translation (vec3 (0.0, 0.0, -3.0));
+
+    projection = m4_perspective (45.0, 800.0 / 600.0, 0.1, 100.0);
+
+    GLCALL (glEnable (GL_DEPTH_TEST));
+    GLCALL (glDepthFunc (GL_LESS));
+    GLCALL (glUseProgram (shader_id));
+
+    /* camera */
+    GLCALL (model_location = glGetUniformLocation (shader_id, "u_model"));
+    GLCALL (view_location = glGetUniformLocation (shader_id, "u_view"));
+    GLCALL (projection_location = glGetUniformLocation (shader_id, "u_projection"));
+    GLCALL (glUniformMatrix4fv (model_location, 1, GL_FALSE, &model.m[0][0]));
+    GLCALL (glUniformMatrix4fv (view_location, 1, GL_FALSE, &view.m[0][0]));
+    GLCALL (glUniformMatrix4fv (projection_location, 1, GL_FALSE, &projection.m[0][0]));
+
+    /* brick texture */
+    GLCALL (tex0_location = glGetUniformLocation (shader_id, "u_texture0"));
+    GLCALL (glUniform1i (tex0_location, 0));
+    GLCALL (glActiveTexture (GL_TEXTURE0));
+    GLCALL (glBindTexture (GL_TEXTURE_2D, rt->texture_ids[0]));
+
+    /* face texture */
+    GLCALL (tex1_location = glGetUniformLocation (shader_id, "u_texture1"));
+    GLCALL (glUniform1i (tex1_location, 1));
+    GLCALL (glActiveTexture (GL_TEXTURE1));
+    GLCALL (glBindTexture (GL_TEXTURE_2D, rt->texture_ids[1]));
+
+    /* draw */
+    GLCALL (glBindVertexArray (rt->vao));
+    GLCALL (glDrawArrays (GL_TRIANGLES, 0, 36));
+
+    /* cleanup */
+    GLCALL (glDisable (GL_DEPTH_TEST));
 }
 
 int
@@ -643,10 +776,10 @@ main (int c, char **v)
      *                            +-----> indices |
      *                                  +---------+
      */
-    
     square_setup (&ctx.render_targets[STATE_RENDER_SQUARE]);
     triangle_setup (&ctx.render_targets[STATE_RENDER_TRIANGLE]);
     texture_setup (&ctx.render_targets[STATE_RENDER_TEXTURE]);
+    cube_setup (&ctx.render_targets[STATE_RENDER_CUBE]);
 
     g__running = true;
     while (g__running)
@@ -656,7 +789,7 @@ main (int c, char **v)
         handle_input (&ctx);
 
         GLCALL (glClearColor (0.2, 0.3, 0.3, 1.0));
-        GLCALL (glClear (GL_COLOR_BUFFER_BIT));
+        GLCALL (glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
         GLCALL (glPolygonMode (GL_FRONT_AND_BACK, ctx.draw_wireframes ? GL_LINE : GL_FILL));
 
         rt = &ctx.render_targets[ctx.state];
@@ -671,6 +804,9 @@ main (int c, char **v)
                 break;
             case STATE_RENDER_TEXTURE:
                 texture_render (&ctx, rt);
+                break;
+            case STATE_RENDER_CUBE:
+                cube_render (&ctx, rt);
                 break;
         }
 
