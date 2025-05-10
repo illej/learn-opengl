@@ -393,24 +393,30 @@ texture_create (char *file)
     stbi_set_flip_vertically_on_load (1);
     data = stbi_load (file, &w, &h, &bytes_per_pixel, 4);
 
-    ASSERT (data != NULL);
+    if (data)
+    {
+        GLCALL (glGenTextures (1, &id));
+        GLCALL (glBindTexture (GL_TEXTURE_2D, id));
 
-    GLCALL (glGenTextures (1, &id));
-    GLCALL (glBindTexture (GL_TEXTURE_2D, id));
+        GLCALL (glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+        GLCALL (glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+        GLCALL (glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)); // GL_REPEAT?
+        GLCALL (glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)); // GL_REPEAT?
 
-    GLCALL (glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-    GLCALL (glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-    GLCALL (glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-    GLCALL (glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+        GLCALL (glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data));
+        GLCALL (glGenerateMipmap (GL_TEXTURE_2D));
+        GLCALL (glBindTexture (GL_TEXTURE_2D, 0));
 
-    GLCALL (glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data));
-    GLCALL (glGenerateMipmap (GL_TEXTURE_2D));
-    GLCALL (glBindTexture (GL_TEXTURE_2D, 0));
+        stbi_image_free (data);
 
-    stbi_image_free (data);
+        printf ("Load texture '%s' (id=%u w=%d h=%d bpp=%d)\n", file, id, w, h, bytes_per_pixel);
+    }
+    else
+    {
+        LOG_ERROR ("Failed to load file '%s'", file);
+    }
+
     ASSERT (id > 0);
-
-    printf ("Load texture '%s' (id=%u w=%d h=%d bpp=%d)\n", file, id, w, h, bytes_per_pixel);
 
     return id;
 }
