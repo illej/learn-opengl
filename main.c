@@ -231,6 +231,11 @@ process_keydown (struct context *ctx, SDL_Keycode key)
             break;
         case SDLK_4:
             ctx->state = STATE_RENDER_CUBE;
+            ctx->variation++;
+            if (ctx->variation >= 9)
+            {
+                ctx->variation = 0;
+            }
             break;
         default:
             printf ("Unhandled key: %c (%d)\n", key, key);
@@ -703,6 +708,18 @@ cube_setup (struct render_target *rt)
 static void
 cube_render (struct context *ctx, struct render_target *rt)
 {
+    vec3_t cubes[] = {
+        {  2.0,  5.0, -15.0 },
+        { -1.5, -2.2, -2.5  },
+        { -3.8, -2.0, -12.3 },
+        {  2.4, -0.4, -3.5  },
+        { -1.7,  3.0, -7.5  },
+        {  1.3, -2.0, -2.5  },
+        {  1.5,  2.0, -2.5  },
+        {  1.5,  0.2, -1.5  },
+        { -1.3,  1.0, -1.5  }
+    };
+
     unsigned int shader_id = rt->shader_ids[0];
     mat4_t model;
     mat4_t view;
@@ -748,6 +765,14 @@ cube_render (struct context *ctx, struct render_target *rt)
     /* draw */
     GLCALL (glBindVertexArray (rt->vao));
     GLCALL (glDrawArrays (GL_TRIANGLES, 0, 36));
+
+    for (int i = 0; i < ctx->variation; i++)
+    {
+        model = m4_translation (cubes[i]);
+        model = m4_mul (model, m4_rotation (secs, vec3 (1.0, 0.3, 0.5)));
+        GLCALL (glUniformMatrix4fv (model_location, 1, GL_FALSE, &model.m[0][0]));
+        GLCALL (glDrawArrays (GL_TRIANGLES, 0, 36));
+    }
 
     /* cleanup */
     GLCALL (glDisable (GL_DEPTH_TEST));
